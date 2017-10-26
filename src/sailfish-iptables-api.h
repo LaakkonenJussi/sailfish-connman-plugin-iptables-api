@@ -1,36 +1,46 @@
 #ifndef __SAILFISH_IPTABLES_API_H_
 #define __SAILFISH_IPTABLES_API_H_
 
-#include <stdbool.h>
-#include <connman/dbus_iptables_api.h>
-#include <connman/exposed_api.h>
-#include <connman/log.h>
-#include <connman/plugin.h>
-#include <glib.h>
+#include "sailfish-iptables-api-dbus.h"
 
-#define SAILFISH_IPTABLES_INTERFACE				"org.sailfishos.connman.mdm.iptables"
-#define SAILFISH_IPTABLES_PATH_PREFIX			"/org/sailfishos/connman/mdm/iptables/manage"
-#define SAILFISH_IPTABLES_INTERFACE_VERSION		1
-
-#define SAILFISH_IPTABLES_API_RESULT 			{"result", "b"}
-#define SAILFISH_IPTABLES_API_INPUT				{"operation","i"}
-#define SAILFISH_IPTABLES_API_SIGNAL_INIT		"Initialize"
-#define SAILFISH_IPTABLES_API_SIGNAL_STOP		"Shutdown"
-
-typedef DBusMessage * (* GDBusMethodFunction) (DBusConnection *connection,
-					DBusMessage *message, void *user_data);
-
-struct GDBusArgInfo {
-	const char *name;
-	const char *signature;
+enum sailfish_iptables_api_methods {
+	SAILFISH_IPTABLES_API_GET_PROPERTY = 1,
+	SAILFISH_IPTABLES_API_SET_PROPERTY
 };
 
-DBusMessage* sailfish_iptables_manage(DBusConnection *connection,
-					DBusMessage *message, void *user_data);
-					
+enum sailfish_iptables_api_ipt_operations {
+	SAILFISH_IPTABLES_API_NEW_CHAIN = 1,
+	SAILFISH_IPTABLES_API_DELETE_CHAIN,
+	SAILFISH_IPTABLES_API_FLUSH_CHAIN,
+	SAILFISH_IPTABLES_API_INSERT_RULE,
+	SAILFISH_IPTABLES_API_APPEND_RULE,
+	SAILFISH_IPTABLES_API_DELETE_RULE,
+	SAILFISH_IPTABLES_API_CHANGE_POLICY
+};
+
+enum sailfish_iptables_api_ipt_manage {
+	SAILFISH_IPTABLES_API_IPT_COMMIT = 1,
+	SAILFISH_IPTABLES_API_IPT_LOAD,
+	SAILFISH_IPTABLES_API_IPT_CLEAR
+};
+
+struct sailfish_iptables_api_iptables_rule
+{
+	int operation; // sailfish_api_ipt_operations
+	const char* table;
+	const char* chain;
+	const char* policy;
+	const char* rule;
+};
+
+struct sailfish_iptables_api_iptables_config
+{
+	int operation; // sailfish_api_ipt_manage
+	const char* file_path;
+};
+
 static bool sailfish_iptables_api_save_firewall();
 static bool sailfish_iptables_api_clear_firewall();
 static bool sailfish_iptables_api_load_firewall();
-
 
 #endif

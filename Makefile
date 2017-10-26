@@ -21,6 +21,7 @@ LIB = $(LIB_SONAME)
 #
 SRC = \
  sailfish-iptables-api.c \
+ sailfish-iptables-api-dbus.c
 
 #
 # Directories

@@ -31,8 +31,8 @@ rm -rf %{buildroot}
 %make_install
 
 mkdir -p %{buildroot}/%{_libdir}/connman/plugins
-mkdir -p %{buildroot}/etc/dbus-1/system.d/
-install -m 644 src/sailfish-iptables-api.conf %{buildroot}/etc/dbus-1/system.d/
+mkdir -p %{buildroot}/usr/share/dbus-1/system.d/
+install -m 644 src/sailfish-iptables-api.conf %{buildroot}/usr/share/dbus-1/system.d/
 %preun
 
 %post -p /sbin/ldconfig
@@ -42,5 +42,5 @@ install -m 644 src/sailfish-iptables-api.conf %{buildroot}/etc/dbus-1/system.d/
 %files
 %defattr(-,root,root,-)
 %{_libdir}/connman/plugins/sailfish-iptables-api-plugin.so
-%config /etc/dbus-1/system.d/sailfish-iptables-api.conf
+%config /usr/share/dbus-1/system.d/sailfish-iptables-api.conf
 

@@ -22,7 +22,7 @@
 
 
 #define CONNMAN_API_SUBJECT_TO_CHANGE
-
+#define PLUGIN_NAME "SAILFISH_IPTABLES_API"
 
 #include "sailfish-iptables-api.h"
 
@@ -31,96 +31,128 @@
 
 static bool sailfish_iptables_api_save_firewall()
 {
-	INFO("SAILFISH IPTABLES API SAVE");
+	INFO("%s %s", PLUGIN_NAME, "SAVE");
+	connman_iptables_commit("filter");
 	return true;
 }
 
 static bool sailfish_iptables_api_clear_firewall()
 {
-	INFO("SAILFISH IPTABLES API CLEAR");
+	INFO("%s %s", PLUGIN_NAME, "CLEAR");
+	connman_iptables_cleanup();
 	return true;
 }
 
 static bool sailfish_iptables_api_load_firewall()
 {
-	INFO("SAILFISH IPTABLES API LOAD");
+	INFO("%s %s", PLUGIN_NAME, "LOAD");
 	return true;
 }
 
 DBusMessage* sailfish_iptables_manage(DBusConnection *connection,
 					DBusMessage *message, void *user_data)
 {
-
+	INFO("%s %s", PLUGIN_NAME, "MESSAGE RECEIVED");
 	dbus_int32_t operation;
+	bool operation_complete = false;
 	if (dbus_message_get_args(message, NULL,
 					DBUS_TYPE_INT32, &operation,
 					DBUS_TYPE_INVALID))
 	{
 		switch(operation)
 		{
-			case CONNMAN_DBUS_IPTABLES_API_IPT_COMMIT:
-				sailfish_iptables_api_save_firewall(NULL);
+			case SAILFISH_IPTABLES_API_IPT_COMMIT:
+				operation_complete = sailfish_iptables_api_save_firewall(NULL);
 				break;
-			case CONNMAN_DBUS_IPTABLES_API_IPT_LOAD:
-				sailfish_iptables_api_load_firewall(NULL);
+			case SAILFISH_IPTABLES_API_IPT_LOAD:
+				operation_complete = sailfish_iptables_api_load_firewall(NULL);
 				break;
-			case CONNMAN_DBUS_IPTABLES_API_IPT_CLEAR:
-				sailfish_iptables_api_clear_firewall();
+			case SAILFISH_IPTABLES_API_IPT_CLEAR:
+				operation_complete = sailfish_iptables_api_clear_firewall();
 				break;
 			default:
-			 	return NULL;
+				INFO("%s %s", PLUGIN_NAME, "INVALID OPERATION");
 		}
-		return NULL;
 	}
-	else
-		return NULL;	
+	
+	DBusMessage *reply = dbus_message_new_method_return(message);
+	DBusMessageIter iter;
+	
+	dbus_message_iter_init_append(reply,&iter);
+	
+	
+	dbus_message_iter_append_basic(&iter,DBUS_TYPE_BOOLEAN,&operation_complete);
+	
+	return reply;
+}
+
+DBusMessage* sailfish_iptables_version(DBusConnection *connection,
+			DBusMessage *message, void *user_data)
+{
+	DBusMessage* reply = dbus_message_new_method_return(message);
+	DBusMessageIter iter;
+	dbus_message_iter_init_append(reply,&iter);
+	
+	dbus_int32_t version = 1;
+	
+	dbus_message_iter_append_basic(&iter,
+		DBUS_TYPE_INT32,
+		&version);
+
+	return reply;
+}
+
+DBusMessage* sailfish_iptables_ban_v4address(DBusConnection *connection,
+		DBusMessage *message, void *user_data)
+{
+	DBusMessage* reply = dbus_message_new_method_return(message);
+	DBusMessageIter iter;
+	dbus_message_iter_init_append(reply,&iter);
+	
+	dbus_bool_t result = true;
+	
+	dbus_message_iter_append_basic(&iter,
+		DBUS_TYPE_BOOLEAN,
+		&result);
+
+	return reply;
+}
+
+DBusMessage* sailfish_iptables_unban_v4address(DBusConnection *connection,
+		DBusMessage *message, void *user_data)
+{
+	DBusMessage* reply = dbus_message_new_method_return(message);
+	DBusMessageIter iter;
+	dbus_message_iter_init_append(reply,&iter);
+	
+	dbus_bool_t result = true;
+	
+	dbus_message_iter_append_basic(&iter,
+		DBUS_TYPE_BOOLEAN,
+		&result);
+
+	return reply;
 }
 
 static int sailfish_ipt_api_init(void)
 {
-	INFO("INITIALIZE IPTABLES API");
+	INFO("%s %s", PLUGIN_NAME, "INITIALIZE IPTABLES API");
 	
-	struct connman_dbus_iptables_api_data *data = g_new0(
-		struct connman_dbus_iptables_api_data,1);
+	int err = sailfish_iptables_api_dbus_register();
 	
-	data->path 		= SAILFISH_IPTABLES_PATH_PREFIX;
-	data->interface = SAILFISH_IPTABLES_INTERFACE;
-	
-	data->methods = NULL;
-	
-	struct connman_dbus_iptables_api_method *method = g_new0(
-		struct connman_dbus_iptables_api_method,1);
-	
-	method->name = "ManageFirewall";
-	method->method_call = sailfish_iptables_manage;
-	method->args_in = g_new0(struct GDBusArgInfo,1);
-	method->args_in->name = "operation";
-	method->args_in->signature = "i";
-	method->args_out = NULL;
-	
-	data->methods = method;
-	
-	connman_dbus_iptables_api_register(data);
-	
-	g_free(data->methods);
-	g_free(data);
+	if(err < 0)
+		INFO("%s %s", PLUGIN_NAME, "CANNOT REGISTER TO DBUS");
+	else
+		INFO("%s %s", PLUGIN_NAME, "REGISTER TO DBUS SUCCESS!");
 	
 	return 0;
 }
 
 static void sailfish_ipt_api_exit(void)
 {
-	INFO("EXIT IPTABLES API");
+	INFO("%s %s", PLUGIN_NAME, "EXIT IPTABLES API");
 	
-	struct connman_dbus_iptables_api_data *data = g_new0(
-		struct connman_dbus_iptables_api_data,1);
-	
-	data->path 		= SAILFISH_IPTABLES_PATH_PREFIX;
-	data->interface = SAILFISH_IPTABLES_INTERFACE;
-	
-	connman_dbus_iptables_api_unregister(data);
-
-	g_free(data);
+	sailfish_iptables_api_dbus_unregister();
 }
 
 CONNMAN_PLUGIN_DEFINE(sailfish_ipt_api, "Sailfish iptables API", CONNMAN_VERSION,
