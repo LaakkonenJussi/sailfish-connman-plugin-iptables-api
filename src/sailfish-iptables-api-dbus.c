@@ -25,7 +25,6 @@
 #endif
 
 #define CONNMAN_API_SUBJECT_TO_CHANGE
-#include <connman/dbus.h>
 
 #include <errno.h>
 #include "sailfish-iptables-api-dbus.h"
@@ -33,31 +32,44 @@
 #define INFO(fmt,arg...) connman_info(fmt, ## arg)
 
 static const GDBusSignalTable signals[] = {
-		{ GDBUS_SIGNAL("Initialize", NULL) },
-		{ GDBUS_SIGNAL("STOP", NULL) },
+		{ GDBUS_SIGNAL(
+			SAILFISH_IPTABLES_API_SIGNAL_INIT,
+			NULL)
+		},
+		{ GDBUS_SIGNAL(
+			SAILFISH_IPTABLES_API_SIGNAL_STOP,
+			NULL)
+		},
+		{ GDBUS_SIGNAL(
+			SAILFISH_IPTABLES_API_SIGNAL_LOAD,
+			GDBUS_ARGS(SAILFISH_IPTABLES_API_SIGNAL_MNG_PAR))
+		},
+		{ GDBUS_SIGNAL(
+			SAILFISH_IPTABLES_API_SIGNAL_SAVE,
+			GDBUS_ARGS(SAILFISH_IPTABLES_API_SIGNAL_MNG_PAR))
+		},
+		{ GDBUS_SIGNAL(
+			SAILFISH_IPTABLES_API_SIGNAL_CLEAR,
+			NULL)
+		},
 		{ }
 	};
 	
 static const GDBusMethodTable methods[] = {
-		{ GDBUS_METHOD("ManageFirewall", 
-			GDBUS_ARGS(SAILFISH_IPTABLES_API_INPUT),
-			GDBUS_ARGS(SAILFISH_IPTABLES_API_RESULT),
-			sailfish_iptables_manage)
-		},
 		{ GDBUS_METHOD("SaveFirewall", 
-			GDBUS_ARGS(SAILFISH_IPTABLES_API_INPUT),
+			GDBUS_ARGS(SAILFISH_IPTABLES_API_INPUT_PATH),
 			GDBUS_ARGS(SAILFISH_IPTABLES_API_RESULT),
-			sailfish_iptables_manage)
+			sailfish_iptables_save_firewall)
 		},
 		{ GDBUS_METHOD("LoadFirewall", 
-			GDBUS_ARGS(SAILFISH_IPTABLES_API_INPUT),
+			GDBUS_ARGS(SAILFISH_IPTABLES_API_INPUT_PATH),
 			GDBUS_ARGS(SAILFISH_IPTABLES_API_RESULT),
-			sailfish_iptables_manage)
+			sailfish_iptables_load_firewall)
 		},
 		{ GDBUS_METHOD("ClearFirewall", 
-			GDBUS_ARGS(SAILFISH_IPTABLES_API_INPUT),
+			NULL,
 			GDBUS_ARGS(SAILFISH_IPTABLES_API_RESULT),
-			sailfish_iptables_manage)
+			sailfish_iptables_clear_firewall)
 		},
 		{ GDBUS_METHOD("BanIP", 
 			GDBUS_ARGS(SAILFISH_IPTABLES_API_INPUT_ADDRESS),
@@ -76,7 +88,39 @@ static const GDBusMethodTable methods[] = {
 		},
 		{ }
 	};
+	
+void sailfish_iptables_send_signal(DBusMessage *signal)
+{
+	DBusConnection* connman_dbus = dbus_connection_ref(
+			connman_dbus_get_connection());
+			
+	g_dbus_send_message(connman_dbus,signal);
+	dbus_connection_unref(connman_dbus);
+}
 
+DBusMessage* sailfish_iptables_signal(const char* signal_name, const char* arg)
+{
+	if(!signal_name) return NULL;
+	
+	DBusMessage *signal = dbus_message_new_signal(
+					SAILFISH_IPTABLES_PATH_PREFIX,
+					SAILFISH_IPTABLES_INTERFACE,
+					signal_name);
+	if(arg)
+	{
+		DBusMessageIter iter;
+		dbus_message_iter_init_append(signal,&iter);
+	
+		if(!dbus_message_iter_append_basic(&iter,DBUS_TYPE_STRING,arg))
+		{
+			dbus_message_unref(signal);
+			INFO("saifish_iptables_signal failed to add parameter to signal");
+			return NULL;
+		}
+	}
+	
+	return signal;
+}
 
 int sailfish_iptables_api_dbus_register() {
 	
@@ -95,29 +139,11 @@ int sailfish_iptables_api_dbus_register() {
 			NULL))
 		{
 			
-			DBusMessage *signal = dbus_message_new_signal(
-						SAILFISH_IPTABLES_PATH_PREFIX,
-						SAILFISH_IPTABLES_INTERFACE,
-						"Initialize");
-			g_dbus_send_message(conn,signal);
-			
-			DBusMessage *msg = dbus_message_new_method_call(
-						CONNMAN_SERVICE,
-						SAILFISH_IPTABLES_PATH_PREFIX,
-						SAILFISH_IPTABLES_INTERFACE,
-						"ManageFirewall");
-			DBusMessageIter args;
-			dbus_message_iter_init_append(msg,&args);
-			int value = 1;
-			dbus_uint32_t serial = 0;
-			if(!dbus_message_iter_append_basic(&args,DBUS_TYPE_INT32,&value))
-				INFO("IPTABLES API DBUS CANNOT APPEND ITER");
-			if(!dbus_connection_send(conn,msg,&serial))
-				INFO("IPTABLES API DBUS CANNOT SEND MESSAGE");
-			else
-				INFO("IPTABLES API DBUS MESSAGE SENT");
-			dbus_connection_flush(conn);
-			dbus_message_unref(msg);
+			DBusMessage *signal = sailfish_iptables_signal(
+					SAILFISH_IPTABLES_API_SIGNAL_INIT,NULL);
+				
+			if(signal)
+				sailfish_iptables_send_signal(signal);
 		}
 		else
 		{
@@ -148,7 +174,10 @@ int sailfish_iptables_api_dbus_unregister()
 			SAILFISH_IPTABLES_PATH_PREFIX,
 			SAILFISH_IPTABLES_INTERFACE))
 		{
-			INFO("IPTABLES API DBUS UNREGISTER");
+			DBusMessage *signal = sailfish_iptables_signal(
+					SAILFISH_IPTABLES_API_SIGNAL_STOP,NULL);
+			if(signal)
+				sailfish_iptables_send_signal(signal);
 		}
 		else
 		{
@@ -156,9 +185,13 @@ int sailfish_iptables_api_dbus_unregister()
 			rval = -1;
 		}
 	}
-	else
+	else 
+	{
+		INFO("IPTABLES API DBUS UNREGISTER FAILED");
 		rval = -1;
+	}
 	
+	INFO("IPTABLES API DBUS UNREGISTER");
 	return rval;
 }
 

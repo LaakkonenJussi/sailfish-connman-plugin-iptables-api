@@ -29,60 +29,119 @@
 #define ERR(fmt,arg...) connman_error(fmt, ## arg)
 #define INFO(fmt,arg...) connman_info(fmt, ## arg)
 
-static bool sailfish_iptables_api_save_firewall()
+static gboolean sailfish_iptables_api_save_firewall(const char* path)
 {
 	INFO("%s %s", PLUGIN_NAME, "SAVE");
 	connman_iptables_commit("filter");
 	return true;
 }
 
-static bool sailfish_iptables_api_clear_firewall()
+static gboolean sailfish_iptables_api_load_firewall(const char* path)
+{
+	INFO("%s %s", PLUGIN_NAME, "LOAD");
+	return true;
+}
+
+static gboolean sailfish_iptables_api_clear_firewall()
 {
 	INFO("%s %s", PLUGIN_NAME, "CLEAR");
 	connman_iptables_cleanup();
 	return true;
 }
 
-static bool sailfish_iptables_api_load_firewall()
+DBusMessage* sailfish_iptables_save_firewall(DBusConnection *connection,
+			DBusMessage *message, void *user_data)
 {
-	INFO("%s %s", PLUGIN_NAME, "LOAD");
-	return true;
-}
-
-DBusMessage* sailfish_iptables_manage(DBusConnection *connection,
-					DBusMessage *message, void *user_data)
-{
-	INFO("%s %s", PLUGIN_NAME, "MESSAGE RECEIVED");
-	dbus_int32_t operation;
-	bool operation_complete = false;
-	if (dbus_message_get_args(message, NULL,
-					DBUS_TYPE_INT32, &operation,
-					DBUS_TYPE_INVALID))
+	const char* path = NULL;
+	dbus_uint32_t result = false;
+	
+	if(dbus_message_get_args(message, NULL,
+		DBUS_TYPE_STRING, &path,
+		DBUS_TYPE_INVALID))
 	{
-		switch(operation)
+		if((result = sailfish_iptables_api_save_firewall(path)))
 		{
-			case SAILFISH_IPTABLES_API_IPT_COMMIT:
-				operation_complete = sailfish_iptables_api_save_firewall(NULL);
-				break;
-			case SAILFISH_IPTABLES_API_IPT_LOAD:
-				operation_complete = sailfish_iptables_api_load_firewall(NULL);
-				break;
-			case SAILFISH_IPTABLES_API_IPT_CLEAR:
-				operation_complete = sailfish_iptables_api_clear_firewall();
-				break;
-			default:
-				INFO("%s %s", PLUGIN_NAME, "INVALID OPERATION");
+			DBusMessage *signal = sailfish_iptables_signal(
+					SAILFISH_IPTABLES_API_SIGNAL_SAVE,NULL);
+			if(signal)
+				sailfish_iptables_send_signal(signal);
 		}
 	}
 	
-	DBusMessage *reply = dbus_message_new_method_return(message);
+	DBusMessage* reply = dbus_message_new_method_return(message);
 	DBusMessageIter iter;
-	
 	dbus_message_iter_init_append(reply,&iter);
 	
+	if(!dbus_message_iter_append_basic(&iter,
+		DBUS_TYPE_BOOLEAN,
+		&result))
+	{
+		dbus_message_unref(reply);
+		reply = g_dbus_create_error(message,DBUS_ERROR_NO_MEMORY,
+			"failed to add parameter to reply.");
+	}
+
+	return reply;
+}
+					
+DBusMessage* sailfish_iptables_load_firewall(DBusConnection *connection,
+			DBusMessage *message, void *user_data)
+{
+	const char* path = NULL;
+	dbus_bool_t result = false;
 	
-	dbus_message_iter_append_basic(&iter,DBUS_TYPE_BOOLEAN,&operation_complete);
+	if(dbus_message_get_args(message, NULL,
+		DBUS_TYPE_STRING, &path,
+		DBUS_TYPE_INVALID))
+	{
+		if((result = sailfish_iptables_api_load_firewall(path)))
+		{
+			DBusMessage *signal = sailfish_iptables_signal(
+					SAILFISH_IPTABLES_API_SIGNAL_LOAD,NULL);
+			if(signal)
+				sailfish_iptables_send_signal(signal);
+		}
+	}
 	
+	DBusMessage* reply = dbus_message_new_method_return(message);
+	DBusMessageIter iter;
+	dbus_message_iter_init_append(reply,&iter);
+	
+	if(!dbus_message_iter_append_basic(&iter,
+		DBUS_TYPE_BOOLEAN,
+		&result))
+	{
+		dbus_message_unref(reply);
+		reply = g_dbus_create_error(message,DBUS_ERROR_NO_MEMORY,
+			"failed to add parameter to reply.");
+	}
+
+	return reply;
+}
+
+DBusMessage* sailfish_iptables_clear_firewall(DBusConnection *connection,
+			DBusMessage *message, void *user_data)
+{
+	dbus_bool_t result = sailfish_iptables_api_clear_firewall();
+		
+	DBusMessage *signal = sailfish_iptables_signal(
+					SAILFISH_IPTABLES_API_SIGNAL_CLEAR,NULL);
+	if(signal)
+		sailfish_iptables_send_signal(signal);
+		
+	DBusMessage* reply = dbus_message_new_method_return(message);
+	DBusMessageIter iter;
+	dbus_message_iter_init_append(reply,&iter);
+	
+	if(!dbus_message_iter_append_basic(&iter,
+		DBUS_TYPE_BOOLEAN,
+		&result))
+	{
+		dbus_message_unref(reply);
+		reply = g_dbus_create_error(message,DBUS_ERROR_NO_MEMORY,
+			"failed to add parameter to reply.");
+	}
+
 	return reply;
 }
 

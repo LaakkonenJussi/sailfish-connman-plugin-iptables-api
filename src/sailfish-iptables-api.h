@@ -39,8 +39,8 @@ struct sailfish_iptables_api_iptables_config
 	const char* file_path;
 };
 
-static bool sailfish_iptables_api_save_firewall();
-static bool sailfish_iptables_api_clear_firewall();
-static bool sailfish_iptables_api_load_firewall();
+static gboolean sailfish_iptables_api_save_firewall(const char* path);
+static gboolean sailfish_iptables_api_load_firewall(const char* path);
+static gboolean sailfish_iptables_api_clear_firewall();
 
 #endif

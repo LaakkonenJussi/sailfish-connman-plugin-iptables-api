@@ -24,6 +24,7 @@
 
 #include <connman/log.h>
 #include <connman/plugin.h>
+#include <connman/dbus.h>
 #include <connman/exposed_api.h>
 #include <connman/gdbus_external_use.h>
 
@@ -36,9 +37,16 @@
 #define SAILFISH_IPTABLES_API_RESULT 			{"result", "b"}
 #define SAILFISH_IPTABLES_API_RESULT_VERSION	{"version", "i"}
 #define SAILFISH_IPTABLES_API_INPUT				{"operation","i"}
+#define SAILFISH_IPTABLES_API_INPUT_PATH		{"path","s"}
 #define SAILFISH_IPTABLES_API_INPUT_ADDRESS		{"ip","s"}
+
 #define SAILFISH_IPTABLES_API_SIGNAL_INIT		"Initialize"
 #define SAILFISH_IPTABLES_API_SIGNAL_STOP		"Shutdown"
+#define SAILFISH_IPTABLES_API_SIGNAL_LOAD		"Load"
+#define SAILFISH_IPTABLES_API_SIGNAL_SAVE		"Save"
+#define SAILFISH_IPTABLES_API_SIGNAL_MNG_PAR	{"path","s"}
+#define SAILFISH_IPTABLES_API_SIGNAL_CLEAR		"Clear"
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -48,9 +56,16 @@ int sailfish_iptables_api_dbus_register();
 int sailfish_iptables_api_dbus_unregister();
 
 /* These are connected to dbus */
-DBusMessage* sailfish_iptables_manage(DBusConnection *connection,
+
+DBusMessage* sailfish_iptables_save_firewall(DBusConnection *connection,
 			DBusMessage *message, void *user_data);
 					
+DBusMessage* sailfish_iptables_load_firewall(DBusConnection *connection,
+			DBusMessage *message, void *user_data);
+
+DBusMessage* sailfish_iptables_clear_firewall(DBusConnection *connection,
+			DBusMessage *message, void *user_data);
+
 DBusMessage* sailfish_iptables_version(DBusConnection *connection,
 			DBusMessage *message, void *user_data);
 			
@@ -59,6 +74,10 @@ DBusMessage* sailfish_iptables_ban_v4address(DBusConnection *connection,
 
 DBusMessage* sailfish_iptables_unban_v4address(DBusConnection *connection,
 			DBusMessage *message, void *user_data);
+
+void sailfish_iptables_send_signal(DBusMessage *signal);
+			
+DBusMessage* sailfish_iptables_signal(const char* signal, const char* arg);
 
 #ifdef __cplusplus
 }
