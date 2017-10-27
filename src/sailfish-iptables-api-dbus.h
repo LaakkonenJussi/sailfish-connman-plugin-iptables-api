@@ -18,15 +18,15 @@
 #define __SAILFISH_IPTABLES_API_DBUS_H_
 
 #include <stdbool.h>
+#include <string.h>
 #include <dbus/dbus.h>
-#include <stdbool.h>
 #include <glib.h>
 
 #include <connman/log.h>
 #include <connman/plugin.h>
 #include <connman/dbus.h>
 #include <connman/exposed_api.h>
-#include <connman/gdbus_external_use.h>
+#include <connman/gdbus_external.h>
 
 
 
@@ -44,8 +44,14 @@
 #define SAILFISH_IPTABLES_API_SIGNAL_STOP		"Shutdown"
 #define SAILFISH_IPTABLES_API_SIGNAL_LOAD		"Load"
 #define SAILFISH_IPTABLES_API_SIGNAL_SAVE		"Save"
-#define SAILFISH_IPTABLES_API_SIGNAL_MNG_PAR	{"path","s"}
+#define SAILFISH_IPTABLES_API_SIGNAL_MNG_PAR	SAILFISH_IPTABLES_API_INPUT_PATH
 #define SAILFISH_IPTABLES_API_SIGNAL_CLEAR		"Clear"
+
+#define SAILFISH_IPTABLES_API_SIGNAL_BAN		"BanIPv4"
+#define SAILFISH_IPTABLES_API_SIGNAL_UNBAN		"UnbanIPv4"
+#define SAILFISH_IPTABLES_API_SIGNAL_BAN_PAR	SAILFISH_IPTABLES_API_INPUT_ADDRESS
+#define SAILFISH_IPTABLES_API_SIGNAL_UNBAN_PAR	SAILFISH_IPTABLES_API_INPUT_ADDRESS
+
 
 
 #ifdef __cplusplus
@@ -77,7 +83,7 @@ DBusMessage* sailfish_iptables_unban_v4address(DBusConnection *connection,
 
 void sailfish_iptables_send_signal(DBusMessage *signal);
 			
-DBusMessage* sailfish_iptables_signal(const char* signal, const char* arg);
+DBusMessage* sailfish_iptables_signal(const gchar* signal, const gchar* arg);
 
 #ifdef __cplusplus
 }

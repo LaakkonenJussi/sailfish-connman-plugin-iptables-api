@@ -30,6 +30,7 @@
 #include "sailfish-iptables-api-dbus.h"
 
 #define INFO(fmt,arg...) connman_info(fmt, ## arg)
+#define ERR(fmt,arg...) connman_error(fmt, ## arg)
 
 static const GDBusSignalTable signals[] = {
 		{ GDBUS_SIGNAL(
@@ -52,6 +53,14 @@ static const GDBusSignalTable signals[] = {
 			SAILFISH_IPTABLES_API_SIGNAL_CLEAR,
 			NULL)
 		},
+		{ GDBUS_SIGNAL(
+			SAILFISH_IPTABLES_API_SIGNAL_BAN,
+			GDBUS_ARGS(SAILFISH_IPTABLES_API_SIGNAL_BAN_PAR))
+		},
+		{ GDBUS_SIGNAL(
+			SAILFISH_IPTABLES_API_SIGNAL_UNBAN,
+			GDBUS_ARGS(SAILFISH_IPTABLES_API_SIGNAL_UNBAN_PAR))
+		},
 		{ }
 	};
 	
@@ -71,12 +80,12 @@ static const GDBusMethodTable methods[] = {
 			GDBUS_ARGS(SAILFISH_IPTABLES_API_RESULT),
 			sailfish_iptables_clear_firewall)
 		},
-		{ GDBUS_METHOD("BanIP", 
+		{ GDBUS_METHOD("BanIPv4", 
 			GDBUS_ARGS(SAILFISH_IPTABLES_API_INPUT_ADDRESS),
 			GDBUS_ARGS(SAILFISH_IPTABLES_API_RESULT),
 			sailfish_iptables_ban_v4address)
 		},
-		{ GDBUS_METHOD("UnbanIP", 
+		{ GDBUS_METHOD("UnbanIPv4", 
 			GDBUS_ARGS(SAILFISH_IPTABLES_API_INPUT_ADDRESS),
 			GDBUS_ARGS(SAILFISH_IPTABLES_API_RESULT),
 			sailfish_iptables_unban_v4address)
@@ -98,7 +107,7 @@ void sailfish_iptables_send_signal(DBusMessage *signal)
 	dbus_connection_unref(connman_dbus);
 }
 
-DBusMessage* sailfish_iptables_signal(const char* signal_name, const char* arg)
+DBusMessage* sailfish_iptables_signal(const gchar* signal_name, const gchar* arg)
 {
 	if(!signal_name) return NULL;
 	
@@ -106,15 +115,15 @@ DBusMessage* sailfish_iptables_signal(const char* signal_name, const char* arg)
 					SAILFISH_IPTABLES_PATH_PREFIX,
 					SAILFISH_IPTABLES_INTERFACE,
 					signal_name);
-	if(arg)
+	if(arg && strlen(arg))
 	{
 		DBusMessageIter iter;
 		dbus_message_iter_init_append(signal,&iter);
 	
-		if(!dbus_message_iter_append_basic(&iter,DBUS_TYPE_STRING,arg))
+		if(!dbus_message_iter_append_basic(&iter,DBUS_TYPE_STRING,&arg))
 		{
 			dbus_message_unref(signal);
-			INFO("saifish_iptables_signal failed to add parameter to signal");
+			ERR("saifish_iptables_signal(): failed to add parameter to signal");
 			return NULL;
 		}
 	}

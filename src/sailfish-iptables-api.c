@@ -29,30 +29,40 @@
 #define ERR(fmt,arg...) connman_error(fmt, ## arg)
 #define INFO(fmt,arg...) connman_info(fmt, ## arg)
 
-static gboolean sailfish_iptables_api_save_firewall(const char* path)
+static gboolean sailfish_iptables_api_save_firewall(const gchar* path)
 {
-	INFO("%s %s", PLUGIN_NAME, "SAVE");
+	INFO("%s %s %s", PLUGIN_NAME, "SAVE", (path ? path : "null"));
 	connman_iptables_commit("filter");
 	return true;
 }
 
-static gboolean sailfish_iptables_api_load_firewall(const char* path)
+static gboolean sailfish_iptables_api_load_firewall(const gchar* path)
 {
-	INFO("%s %s", PLUGIN_NAME, "LOAD");
+	INFO("%s %s %s", PLUGIN_NAME, "LOAD", (path ? path : "null"));
 	return true;
 }
 
 static gboolean sailfish_iptables_api_clear_firewall()
 {
 	INFO("%s %s", PLUGIN_NAME, "CLEAR");
-	connman_iptables_cleanup();
+	//connman_iptables_cleanup();
 	return true;
+}
+
+static gboolean sailfish_iptables_api_add_to_filter_table(gboolean type,
+	const gchar* ip)
+{	
+	INFO("%s %s %s", PLUGIN_NAME, (type ? "BAN" : "UNBAN"), (ip ? ip : "null"));
+	
+	if(ip && strlen(ip)) return true;
+	
+	return false;
 }
 
 DBusMessage* sailfish_iptables_save_firewall(DBusConnection *connection,
 			DBusMessage *message, void *user_data)
 {
-	const char* path = NULL;
+	const gchar* path = NULL;
 	dbus_uint32_t result = false;
 	
 	if(dbus_message_get_args(message, NULL,
@@ -62,7 +72,7 @@ DBusMessage* sailfish_iptables_save_firewall(DBusConnection *connection,
 		if((result = sailfish_iptables_api_save_firewall(path)))
 		{
 			DBusMessage *signal = sailfish_iptables_signal(
-					SAILFISH_IPTABLES_API_SIGNAL_SAVE,NULL);
+					SAILFISH_IPTABLES_API_SIGNAL_SAVE,path);
 			if(signal)
 				sailfish_iptables_send_signal(signal);
 		}
@@ -87,7 +97,7 @@ DBusMessage* sailfish_iptables_save_firewall(DBusConnection *connection,
 DBusMessage* sailfish_iptables_load_firewall(DBusConnection *connection,
 			DBusMessage *message, void *user_data)
 {
-	const char* path = NULL;
+	const gchar* path = NULL;
 	dbus_bool_t result = false;
 	
 	if(dbus_message_get_args(message, NULL,
@@ -97,7 +107,7 @@ DBusMessage* sailfish_iptables_load_firewall(DBusConnection *connection,
 		if((result = sailfish_iptables_api_load_firewall(path)))
 		{
 			DBusMessage *signal = sailfish_iptables_signal(
-					SAILFISH_IPTABLES_API_SIGNAL_LOAD,NULL);
+					SAILFISH_IPTABLES_API_SIGNAL_LOAD,path);
 			if(signal)
 				sailfish_iptables_send_signal(signal);
 		}
@@ -164,11 +174,25 @@ DBusMessage* sailfish_iptables_version(DBusConnection *connection,
 DBusMessage* sailfish_iptables_ban_v4address(DBusConnection *connection,
 		DBusMessage *message, void *user_data)
 {
+	const gchar* ip = NULL;
+	dbus_bool_t result = false;
+	
+	if(dbus_message_get_args(message, NULL,
+		DBUS_TYPE_STRING, &ip,
+		DBUS_TYPE_INVALID))
+	{
+		if((result = sailfish_iptables_api_add_to_filter_table(true,ip)))
+		{
+			DBusMessage *signal = sailfish_iptables_signal(
+					SAILFISH_IPTABLES_API_SIGNAL_BAN,ip);
+			if(signal)
+				sailfish_iptables_send_signal(signal);
+		}
+	}
+
 	DBusMessage* reply = dbus_message_new_method_return(message);
 	DBusMessageIter iter;
 	dbus_message_iter_init_append(reply,&iter);
-	
-	dbus_bool_t result = true;
 	
 	dbus_message_iter_append_basic(&iter,
 		DBUS_TYPE_BOOLEAN,
@@ -180,11 +204,25 @@ DBusMessage* sailfish_iptables_ban_v4address(DBusConnection *connection,
 DBusMessage* sailfish_iptables_unban_v4address(DBusConnection *connection,
 		DBusMessage *message, void *user_data)
 {
+	const gchar* ip = NULL;
+	dbus_bool_t result = false;
+	
+	if(dbus_message_get_args(message, NULL,
+		DBUS_TYPE_STRING, &ip,
+		DBUS_TYPE_INVALID))
+	{
+		if((result = sailfish_iptables_api_add_to_filter_table(false,ip)))
+		{
+			DBusMessage *signal = sailfish_iptables_signal(
+					SAILFISH_IPTABLES_API_SIGNAL_UNBAN,ip);
+			if(signal)
+				sailfish_iptables_send_signal(signal);
+		}
+	}
+
 	DBusMessage* reply = dbus_message_new_method_return(message);
 	DBusMessageIter iter;
 	dbus_message_iter_init_append(reply,&iter);
-	
-	dbus_bool_t result = true;
 	
 	dbus_message_iter_append_basic(&iter,
 		DBUS_TYPE_BOOLEAN,

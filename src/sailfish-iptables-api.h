@@ -27,20 +27,20 @@ enum sailfish_iptables_api_ipt_manage {
 struct sailfish_iptables_api_iptables_rule
 {
 	int operation; // sailfish_api_ipt_operations
-	const char* table;
-	const char* chain;
-	const char* policy;
-	const char* rule;
+	const gchar* table;
+	const gchar* chain;
+	const gchar* policy;
+	const gchar* rule;
 };
 
 struct sailfish_iptables_api_iptables_config
 {
 	int operation; // sailfish_api_ipt_manage
-	const char* file_path;
+	const gchar* file_path;
 };
 
-static gboolean sailfish_iptables_api_save_firewall(const char* path);
-static gboolean sailfish_iptables_api_load_firewall(const char* path);
+static gboolean sailfish_iptables_api_save_firewall(const gchar* path);
+static gboolean sailfish_iptables_api_load_firewall(const gchar* path);
 static gboolean sailfish_iptables_api_clear_firewall();
 
 #endif
