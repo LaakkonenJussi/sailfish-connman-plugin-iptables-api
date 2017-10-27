@@ -24,10 +24,36 @@
 #define CONNMAN_API_SUBJECT_TO_CHANGE
 #define PLUGIN_NAME "SAILFISH_IPTABLES_API"
 
+
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+
 #include "sailfish-iptables-api.h"
 
 #define ERR(fmt,arg...) connman_error(fmt, ## arg)
 #define INFO(fmt,arg...) connman_info(fmt, ## arg)
+
+static gboolean validate_ip_address(gint type, const gchar* ip)
+{
+	if(ip && strlen(ip))
+	{			
+		struct addrinfo hints;
+		struct addrinfo *result;
+		
+		memset(&hints, 0, sizeof(struct addrinfo));
+		
+		if (type == 6)
+			hints.ai_family = AF_INET6;
+		else
+			hints.ai_family = AF_INET;
+		hints.ai_flags = AI_NUMERICHOST;
+		
+		if(getaddrinfo(ip,NULL,&hints,&result) == 0)
+			return true;
+	}
+	return false;
+}
 
 static gboolean sailfish_iptables_api_save_firewall(const gchar* path)
 {
@@ -45,18 +71,50 @@ static gboolean sailfish_iptables_api_load_firewall(const gchar* path)
 static gboolean sailfish_iptables_api_clear_firewall()
 {
 	INFO("%s %s", PLUGIN_NAME, "CLEAR");
-	//connman_iptables_cleanup();
 	return true;
 }
 
 static gboolean sailfish_iptables_api_add_to_filter_table(gboolean type,
 	const gchar* ip)
 {	
+	gboolean rval = false;
 	INFO("%s %s %s", PLUGIN_NAME, (type ? "BAN" : "UNBAN"), (ip ? ip : "null"));
 	
-	if(ip && strlen(ip)) return true;
+	if(ip && strlen(ip) && validate_ip_address(4,ip))
+	{
+		gchar* rule = g_strdup_printf("%s %s %s %s","-s",ip,"-j","DROP");
+		
+		gint result = 0;
+		
+		if(type) // ban
+		{
+			if((result = connman_iptables_append("filter","INPUT",rule)) == 0)
+				INFO("%s %s", PLUGIN_NAME, "connman_iptables_append");
+			else
+				INFO("%s %s %s %d", PLUGIN_NAME,
+					"connman_iptables_append failure", rule, result);
+		}
+		else //unban
+		{
+			if((result = connman_iptables_delete("filter","INPUT",rule)) == 0)
+				INFO("%s %s", PLUGIN_NAME, "connman_iptables_delete success");
+			else
+				INFO("%s %s %s %d", PLUGIN_NAME,
+					"connman_iptables_delete failure", rule, result);
+		}
+		
+		if(result == 0 && connman_iptables_commit("filter") == 0)
+		{
+			INFO("%s %s", PLUGIN_NAME, "connman_iptables_commit");
+			rval = true;
+		}
+		else
+			INFO("%s %s", PLUGIN_NAME, "connman_iptables_commit failed");
+		
+		g_free(rule);
+	}
 	
-	return false;
+	return rval;
 }
 
 DBusMessage* sailfish_iptables_save_firewall(DBusConnection *connection,
