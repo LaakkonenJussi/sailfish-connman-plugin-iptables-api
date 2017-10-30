@@ -42,5 +42,6 @@ struct sailfish_iptables_api_iptables_config
 static gboolean sailfish_iptables_api_save_firewall(const gchar* path);
 static gboolean sailfish_iptables_api_load_firewall(const gchar* path);
 static gboolean sailfish_iptables_api_clear_firewall();
+static gboolean sailfish_iptables_api_set_input_policy(const gchar* policy);
 
 #endif

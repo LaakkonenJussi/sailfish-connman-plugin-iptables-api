@@ -36,10 +36,11 @@
 
 static gboolean validate_ip_address(gint type, const gchar* ip)
 {
+	gboolean rval = false;
 	if(ip && strlen(ip))
 	{			
 		struct addrinfo hints;
-		struct addrinfo *result;
+		struct addrinfo *result = NULL;
 		
 		memset(&hints, 0, sizeof(struct addrinfo));
 		
@@ -49,22 +50,27 @@ static gboolean validate_ip_address(gint type, const gchar* ip)
 			hints.ai_family = AF_INET;
 		hints.ai_flags = AI_NUMERICHOST;
 		
-		if(getaddrinfo(ip,NULL,&hints,&result) == 0)
-			return true;
+		if(!getaddrinfo(ip,NULL,&hints,&result))
+		{
+			if(result)
+				freeaddrinfo(result);
+			rval = true;
+		}
 	}
-	return false;
+	return rval;
 }
 
 static gboolean sailfish_iptables_api_save_firewall(const gchar* path)
 {
 	INFO("%s %s %s", PLUGIN_NAME, "SAVE", (path ? path : "null"));
-	connman_iptables_commit("filter");
+	connman_iptables_save();
 	return true;
 }
 
 static gboolean sailfish_iptables_api_load_firewall(const gchar* path)
 {
 	INFO("%s %s %s", PLUGIN_NAME, "LOAD", (path ? path : "null"));
+	connman_iptables_restore();
 	return true;
 }
 
@@ -72,6 +78,17 @@ static gboolean sailfish_iptables_api_clear_firewall()
 {
 	INFO("%s %s", PLUGIN_NAME, "CLEAR");
 	return true;
+}
+
+static gboolean sailfish_iptables_api_set_input_policy(const gchar* policy)
+{
+	gint ret = 0;
+	gboolean rval = false;
+	if(policy && !(ret = connman_iptables_change_policy("output","forward",policy)))
+		rval = true;
+		
+	INFO("%s %s %s %d", PLUGIN_NAME, "CHANGE INPUT POLICY",policy,ret);
+	return rval;
 }
 
 static gboolean sailfish_iptables_api_add_to_filter_table(gboolean type,
@@ -88,7 +105,7 @@ static gboolean sailfish_iptables_api_add_to_filter_table(gboolean type,
 		
 		if(type) // ban
 		{
-			if((result = connman_iptables_append("filter","INPUT",rule)) == 0)
+			if(!(result = connman_iptables_append("filter","INPUT",rule)))
 				INFO("%s %s", PLUGIN_NAME, "connman_iptables_append");
 			else
 				INFO("%s %s %s %d", PLUGIN_NAME,
@@ -96,14 +113,14 @@ static gboolean sailfish_iptables_api_add_to_filter_table(gboolean type,
 		}
 		else //unban
 		{
-			if((result = connman_iptables_delete("filter","INPUT",rule)) == 0)
+			if(!(result = connman_iptables_delete("filter","INPUT",rule)))
 				INFO("%s %s", PLUGIN_NAME, "connman_iptables_delete success");
 			else
 				INFO("%s %s %s %d", PLUGIN_NAME,
 					"connman_iptables_delete failure", rule, result);
 		}
 		
-		if(result == 0 && connman_iptables_commit("filter") == 0)
+		if(result == 0 && !connman_iptables_commit("filter"))
 		{
 			INFO("%s %s", PLUGIN_NAME, "connman_iptables_commit");
 			rval = true;
@@ -130,7 +147,7 @@ DBusMessage* sailfish_iptables_save_firewall(DBusConnection *connection,
 		if((result = sailfish_iptables_api_save_firewall(path)))
 		{
 			DBusMessage *signal = sailfish_iptables_signal(
-					SAILFISH_IPTABLES_API_SIGNAL_SAVE,path);
+					SAILFISH_IPTABLES_API_SIGNAL_SAVE,"%s", path);
 			if(signal)
 				sailfish_iptables_send_signal(signal);
 		}
@@ -165,7 +182,7 @@ DBusMessage* sailfish_iptables_load_firewall(DBusConnection *connection,
 		if((result = sailfish_iptables_api_load_firewall(path)))
 		{
 			DBusMessage *signal = sailfish_iptables_signal(
-					SAILFISH_IPTABLES_API_SIGNAL_LOAD,path);
+					SAILFISH_IPTABLES_API_SIGNAL_LOAD,"%s",path);
 			if(signal)
 				sailfish_iptables_send_signal(signal);
 		}
@@ -193,7 +210,7 @@ DBusMessage* sailfish_iptables_clear_firewall(DBusConnection *connection,
 	dbus_bool_t result = sailfish_iptables_api_clear_firewall();
 		
 	DBusMessage *signal = sailfish_iptables_signal(
-					SAILFISH_IPTABLES_API_SIGNAL_CLEAR,NULL);
+					SAILFISH_IPTABLES_API_SIGNAL_CLEAR,NULL,NULL);
 	if(signal)
 		sailfish_iptables_send_signal(signal);
 		
@@ -242,7 +259,7 @@ DBusMessage* sailfish_iptables_ban_v4address(DBusConnection *connection,
 		if((result = sailfish_iptables_api_add_to_filter_table(true,ip)))
 		{
 			DBusMessage *signal = sailfish_iptables_signal(
-					SAILFISH_IPTABLES_API_SIGNAL_BAN,ip);
+					SAILFISH_IPTABLES_API_SIGNAL_BAN,"%s",ip);
 			if(signal)
 				sailfish_iptables_send_signal(signal);
 		}
@@ -272,7 +289,7 @@ DBusMessage* sailfish_iptables_unban_v4address(DBusConnection *connection,
 		if((result = sailfish_iptables_api_add_to_filter_table(false,ip)))
 		{
 			DBusMessage *signal = sailfish_iptables_signal(
-					SAILFISH_IPTABLES_API_SIGNAL_UNBAN,ip);
+					SAILFISH_IPTABLES_API_SIGNAL_UNBAN,"%s",ip);
 			if(signal)
 				sailfish_iptables_send_signal(signal);
 		}
@@ -285,6 +302,41 @@ DBusMessage* sailfish_iptables_unban_v4address(DBusConnection *connection,
 	dbus_message_iter_append_basic(&iter,
 		DBUS_TYPE_BOOLEAN,
 		&result);
+
+	return reply;
+}
+
+DBusMessage* sailfish_iptables_change_input_policy(DBusConnection *connection,
+			DBusMessage *message, void *user_data)
+{
+	const gchar* policy = NULL;
+	dbus_uint32_t result = false;
+	
+	if(dbus_message_get_args(message, NULL,
+		DBUS_TYPE_STRING, &policy,
+		DBUS_TYPE_INVALID))
+	{
+		if((result = sailfish_iptables_api_set_input_policy(policy)))
+		{
+			DBusMessage *signal = sailfish_iptables_signal(
+					SAILFISH_IPTABLES_API_SIGNAL_POLICY,"%s",policy);
+			if(signal)
+				sailfish_iptables_send_signal(signal);
+		}
+	}
+	
+	DBusMessage* reply = dbus_message_new_method_return(message);
+	DBusMessageIter iter;
+	dbus_message_iter_init_append(reply,&iter);
+	
+	if(!dbus_message_iter_append_basic(&iter,
+		DBUS_TYPE_BOOLEAN,
+		&result))
+	{
+		dbus_message_unref(reply);
+		reply = g_dbus_create_error(message,DBUS_ERROR_NO_MEMORY,
+			"failed to add parameter to reply.");
+	}
 
 	return reply;
 }

@@ -39,18 +39,23 @@
 #define SAILFISH_IPTABLES_API_INPUT				{"operation","i"}
 #define SAILFISH_IPTABLES_API_INPUT_PATH		{"path","s"}
 #define SAILFISH_IPTABLES_API_INPUT_ADDRESS		{"ip","s"}
+#define SAILFISH_IPTABLES_API_INPUT_POLICY		{"policy", "s"}
 
 #define SAILFISH_IPTABLES_API_SIGNAL_INIT		"Initialize"
 #define SAILFISH_IPTABLES_API_SIGNAL_STOP		"Shutdown"
-#define SAILFISH_IPTABLES_API_SIGNAL_LOAD		"Load"
-#define SAILFISH_IPTABLES_API_SIGNAL_SAVE		"Save"
+#define SAILFISH_IPTABLES_API_SIGNAL_LOAD		"IptablesLoad"
+#define SAILFISH_IPTABLES_API_SIGNAL_SAVE		"IptablesSave"
 #define SAILFISH_IPTABLES_API_SIGNAL_MNG_PAR	SAILFISH_IPTABLES_API_INPUT_PATH
-#define SAILFISH_IPTABLES_API_SIGNAL_CLEAR		"Clear"
+#define SAILFISH_IPTABLES_API_SIGNAL_CLEAR		"IptablesClear"
 
 #define SAILFISH_IPTABLES_API_SIGNAL_BAN		"BanIPv4"
 #define SAILFISH_IPTABLES_API_SIGNAL_UNBAN		"UnbanIPv4"
 #define SAILFISH_IPTABLES_API_SIGNAL_BAN_PAR	SAILFISH_IPTABLES_API_INPUT_ADDRESS
 #define SAILFISH_IPTABLES_API_SIGNAL_UNBAN_PAR	SAILFISH_IPTABLES_API_INPUT_ADDRESS
+
+#define SAILFISH_IPTABLES_API_SIGNAL_POLICY		"PolicyChanged"
+#define SAILFISH_IPTABLES_API_SIGNAL_POLICY_CHAIN	{"chain", "s"}
+#define SAILFISH_IPTABLES_API_SIGNAL_POLICY_TYPE	SAILFISH_IPTABLES_API_INPUT_POLICY
 
 
 
@@ -58,10 +63,14 @@
 extern "C" {
 #endif
 
-int sailfish_iptables_api_dbus_register();
-int sailfish_iptables_api_dbus_unregister();
+gint sailfish_iptables_api_dbus_register();
+gint sailfish_iptables_api_dbus_unregister();
 
-/* These are connected to dbus */
+DBusMessage* sailfish_iptables_signal(const gchar* signal, const gchar* fmt, ...);
+
+void sailfish_iptables_send_signal(DBusMessage *signal);
+
+/* These prototypes are connected to dbus */
 
 DBusMessage* sailfish_iptables_save_firewall(DBusConnection *connection,
 			DBusMessage *message, void *user_data);
@@ -81,9 +90,9 @@ DBusMessage* sailfish_iptables_ban_v4address(DBusConnection *connection,
 DBusMessage* sailfish_iptables_unban_v4address(DBusConnection *connection,
 			DBusMessage *message, void *user_data);
 
-void sailfish_iptables_send_signal(DBusMessage *signal);
-			
-DBusMessage* sailfish_iptables_signal(const gchar* signal, const gchar* arg);
+DBusMessage* sailfish_iptables_change_input_policy(DBusConnection *connection,
+			DBusMessage *message, void *user_data);
+
 
 #ifdef __cplusplus
 }
