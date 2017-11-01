@@ -1,17 +1,18 @@
 Name: sailfish-iptables-api-plugin
 Version: 0.0.1
-Release: 0
+Release: 1
 Summary: Sailfish Connman iptables api plugin
 Group: Development/Libraries
 License: GPLv2
 URL: https://github.com/LaakkonenJussi/sailfish-connman-plugin-iptables-api
 Source: %{name}-%{version}.tar.bz2
 Requires: iptables
-Requires: connman >= 1.31+git44
+Requires: connman >= 1.31+git47
+Requires: connman-devel >= 1.31+git47
 Requires: glib2
 Requires: dbus >= 1.4
 BuildRequires: iptables-devel
-BuildRequires: connman-devel >= 1.31+git44
+BuildRequires: connman-devel >= 1.31+git47
 BuildRequires: pkgconfig(glib-2.0) >= 2.28
 BuildRequires:  pkgconfig(dbus-1) >= 1.4
 Requires(post): /sbin/ldconfig
