@@ -8,7 +8,6 @@ URL: https://github.com/LaakkonenJussi/sailfish-connman-plugin-iptables-api
 Source: %{name}-%{version}.tar.bz2
 Requires: iptables
 Requires: connman >= 1.31+git47
-Requires: connman-devel >= 1.31+git47
 Requires: glib2
 Requires: dbus >= 1.4
 BuildRequires: iptables-devel

@@ -126,15 +126,24 @@ static guint32 mask_to_cidr(gint type, const gchar* mask_address)
 	
 	g_strfreev(ip_tokens);
 	
-	if(mask != G_MAXUINT32 && mask <= i) 
+	// Return protocol mask max (32/128)
+	if (mask == G_MAXUINT32)
+		return i;
+
+	// Between 0 and protocol mask max, return given mask
+	else if(mask <= i)
+		return mask;
+
+	// Value between protocol max and 2^32, calculate cidr mask
+	else
 	{
 		// Create cidr notation (bitmask for nw mask)
 		bits = G_MAXUINT32 - 1;
 		while(--i >= 0 && mask != bits)
 			bits <<= 1;
-	}
 
-	return i;
+		return i;
+	}
 }
 
 gchar* format_ip(gint type, const gchar* ip)
@@ -160,15 +169,17 @@ gchar* format_ip(gint type, const gchar* ip)
 			the new one with network does.
 		*/
 		
-		// Proper mask, between 0 and 32
+		// Proper mask, between 0 and 32/128
 		if(mask && mask < mask_max)
 			formatted_ip = g_strdup_printf("%s/%u",
 				ip_and_mask[0], mask);
-		// Iptables command removes /32 from the end, we do the same
-		else if(mask && mask == mask_max)
-			formatted_ip = g_strdup_printf("%s",
-				ip_and_mask[0]);
-		// 0 (invalid value should have been checked before)
+
+		/* 	Iptables command removes /32 (or /128 IPv6) from the end, we do the
+			same, also for 0, TODO: if 0 given iptables sets 0.0.0.0/0 (any)
+		*/
+		else if(mask && mask == mask_max || !mask)
+			formatted_ip = g_strdup_printf("%s", ip_and_mask[0]);
+		// TODO: this may not be reached
 		else
 			formatted_ip = g_strdup_printf("%s/%s",
 				ip_and_mask[0], ip_and_mask[1]);
@@ -177,6 +188,8 @@ gchar* format_ip(gint type, const gchar* ip)
 	else
 		formatted_ip = g_strdup(ip);
 		
+	DBG("Formatted IP: %s",formatted_ip);
+
 	g_strfreev(ip_and_mask);
 	
 	return formatted_ip;
