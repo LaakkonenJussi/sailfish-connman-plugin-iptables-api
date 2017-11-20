@@ -1,14 +1,14 @@
-#ifndef __SAILFISH_IPTABLES_API_H_
-#define __SAILFISH_IPTABLES_API_H_
+#ifndef __SAILFISH_IPTABLES_H_
+#define __SAILFISH_IPTABLES_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include "sailfish-iptables-api-dbus.h"
+#include "sailfish-iptables-dbus.h"
 
-#define SAILFISH_IPTABLES_API_INTERFACE_VERSION	1
-#define SAILFISH_IPTABLES_API_TABLE_NAME		"filter"
+#define SAILFISH_IPTABLES_INTERFACE_VERSION		1
+#define SAILFISH_IPTABLES_TABLE_NAME			"filter"
 #define IPTABLES_CHAIN_INPUT					"INPUT"
 #define IPTABLES_CHAIN_OUTPUT					"OUTPUT"
 #define IPTABLES_ACCEPT							"ACCEPT"
@@ -30,7 +30,7 @@ extern "C" {
 #define IPV4_MASK_MAX							32
 #define IPV6_MASK_MAX							128
 
-typedef enum sailfish_iptables_api_result {
+typedef enum sailfish_iptables_result {
 	OK = 0,
 	INVALID_IP,
 	INVALID_PORT,
@@ -44,13 +44,13 @@ typedef enum sailfish_iptables_api_result {
 	INVALID
 } api_result;
 
-typedef enum sailfish_iptables_api_rule_operation {
+typedef enum sailfish_iptables_rule_operation {
 	ADD = 0,
 	REMOVE,
 	UNDEFINED
 } rule_operation;
 
-typedef enum sailfish_iptables_api_dbus_rule_args {
+typedef enum sailfish_iptables_dbus_rule_args {
 	ARGS_IP = 0,
 	ARGS_IP_PORT,
 	ARGS_IP_PORT_RANGE,
@@ -65,7 +65,7 @@ typedef enum sailfish_iptables_api_dbus_rule_args {
 	ARGS_POLICY_OUT
 } rule_args;
  
-typedef struct sailfish_iptables_api_rule_params {
+typedef struct sailfish_iptables_rule_params {
 	gchar *ip;
 	gboolean ip_negate;
 	gchar *service;

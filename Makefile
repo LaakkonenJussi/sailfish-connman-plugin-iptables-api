@@ -11,7 +11,7 @@ all: debug release
 #
 # Library name
 #
-NAME = sailfish-iptables-api-plugin
+NAME = sailfish-connman-iptables-plugin
 LIB_NAME = $(NAME)
 LIB_SONAME = $(LIB_NAME).so
 LIB = $(LIB_SONAME)
@@ -20,8 +20,8 @@ LIB = $(LIB_SONAME)
 # Sources
 #
 SRC = \
- sailfish-iptables-api.c \
- sailfish-iptables-api-dbus.c
+ sailfish-iptables.c \
+ sailfish-iptables-dbus.c
 
 #
 # Directories

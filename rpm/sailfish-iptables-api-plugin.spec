@@ -1,10 +1,10 @@
-Name: sailfish-iptables-api-plugin
+Name: sailfish-connman-iptables-plugin
 Version: 0.0.1
 Release: 1
-Summary: Sailfish Connman iptables api plugin
+Summary: Sailfish Connman iptables management plugin
 Group: Development/Libraries
 License: GPLv2
-URL: https://github.com/LaakkonenJussi/sailfish-connman-plugin-iptables-api
+URL: https://github.com/sailfishos/sailfish-connman-plugin-iptables
 Source: %{name}-%{version}.tar.bz2
 Requires: iptables
 Requires: connman >= 1.31+git47
@@ -18,7 +18,7 @@ Requires(post): /sbin/ldconfig
 Requires(postun): /sbin/ldconfig
 
 %description
-This package contains the Sailfish Connman iptables API plugin library.
+This package contains the Sailfish Connman plugin for iptables management.
 
 %prep
 %setup -q -n %{name}-%{version}
@@ -32,7 +32,7 @@ rm -rf %{buildroot}
 
 mkdir -p %{buildroot}/%{_libdir}/connman/plugins
 mkdir -p %{buildroot}/usr/share/dbus-1/system.d/
-install -m 644 src/sailfish-iptables-api.conf %{buildroot}/usr/share/dbus-1/system.d/
+install -m 644 src/sailfish-iptables.conf %{buildroot}/usr/share/dbus-1/system.d/
 %preun
 
 %post -p /sbin/ldconfig
@@ -41,6 +41,6 @@ install -m 644 src/sailfish-iptables-api.conf %{buildroot}/usr/share/dbus-1/syst
 
 %files
 %defattr(-,root,root,-)
-%{_libdir}/connman/plugins/sailfish-iptables-api-plugin.so
-%config /usr/share/dbus-1/system.d/sailfish-iptables-api.conf
+%{_libdir}/connman/plugins/sailfish-connman-iptables-plugin.so
+%config /usr/share/dbus-1/system.d/sailfish-iptables.conf
 
